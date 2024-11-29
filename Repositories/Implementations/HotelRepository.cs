@@ -18,12 +18,18 @@ namespace Cozy.Repositories.Implementations
 
         public async Task<Hotel> GetHotelByIdAsync(int id)
         {
-            return await _context.Hotels.FindAsync(id);
+            return await _context.Hotels
+                .Include(h => h.Rooms)   // Include related rooms
+                .Include(h => h.Reviews) // Include related reviews
+                .FirstOrDefaultAsync(h => h.HotelID == id);
         }
 
         public async Task<IEnumerable<Hotel>> GetAllHotelsAsync()
         {
-            return await _context.Hotels.ToListAsync();
+            return await _context.Hotels
+                .Include(h => h.Rooms)
+                .Include(h => h.Reviews)
+                .ToListAsync();
         }
 
         public async Task<Hotel> AddHotelAsync(Hotel hotel)

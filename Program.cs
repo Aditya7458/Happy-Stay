@@ -1,6 +1,6 @@
-using Cozy.Data; 
-using Cozy.Repositories.Interfaces; 
-using Cozy.Repositories.Implementations; 
+using Cozy.Data;
+using Cozy.Repositories.Interfaces;
+using Cozy.Repositories.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -14,24 +14,29 @@ namespace Cozy
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Configure services
 
-            // Configure the database context
+            // Database context registration
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    builder.Configuration.GetConnectionString("DefaultConnection")
+                )
+            );
 
-            // Register the repository with dependency injection
+            // Dependency injection for repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 
             // Configure JWT authentication
-            var key = Encoding.UTF8.GetBytes("YourSecretKeyHere123!"); // Replace with your secure secret key
+            var secretKey = "YourSecureSecretKeyHere123!"; // Replace with a strong, secure secret key
+            var key = Encoding.UTF8.GetBytes(secretKey);
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
-                options.RequireHttpsMetadata = false;
+                options.RequireHttpsMetadata = true; // Enforce HTTPS in production
                 options.SaveToken = true;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -39,22 +44,23 @@ namespace Cozy
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = "YourIssuer", // Replace with your issuer
-                    ValidAudience = "YourAudience", // Replace with your audience
+                    ValidIssuer = "CozyAppIssuer",  // Replace with your application-specific issuer
+                    ValidAudience = "CozyAppAudience", // Replace with your application-specific audience
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
             });
 
-            // Add controllers and other services
+            // Register controllers
             builder.Services.AddControllers();
 
-            // Swagger/OpenAPI configuration
+            // Add Swagger/OpenAPI configuration for API documentation
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline
+            // Middleware pipeline configuration
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -63,13 +69,11 @@ namespace Cozy
 
             app.UseHttpsRedirection();
 
-            // Enable authentication middleware
+            // Enable authentication and authorization middleware
             app.UseAuthentication();
-
-            // Enable authorization middleware
             app.UseAuthorization();
 
-            // Map controllers
+            // Map API controllers
             app.MapControllers();
 
             app.Run();

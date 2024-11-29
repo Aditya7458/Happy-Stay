@@ -21,29 +21,39 @@ namespace Cozy.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Example configurations (customize as needed)
+            // User entity configuration
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.UserID);
                 entity.Property(u => u.Email).IsRequired();
             });
 
+            // Hotel entity configuration
             modelBuilder.Entity<Hotel>(entity =>
             {
                 entity.HasKey(h => h.HotelID);
                 entity.Property(h => h.Name).IsRequired().HasMaxLength(100);
-            });
 
-            modelBuilder.Entity<Room>(entity =>
-            {
-                entity.HasKey(r => r.RoomID);
-                entity.Property(r => r.RoomSize).IsRequired();
-                entity.HasOne(r => r.Hotel)
-                      .WithMany(h => h.Rooms)
+                entity.HasMany(h => h.Rooms)
+                      .WithOne(r => r.Hotel)
+                      .HasForeignKey(r => r.HotelID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(h => h.Reviews)
+                      .WithOne(r => r.Hotel)
                       .HasForeignKey(r => r.HotelID)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Room entity configuration
+            modelBuilder.Entity<Room>(entity =>
+            {
+                entity.HasKey(r => r.RoomID);
+                entity.Property(r => r.RoomSize).IsRequired();
+                entity.Property(r => r.BedType).IsRequired();
+            });
+
+            // Booking entity configuration
             modelBuilder.Entity<Booking>(entity =>
             {
                 entity.HasKey(b => b.BookingID);
@@ -55,6 +65,7 @@ namespace Cozy.Data
                       .HasForeignKey(b => b.RoomID);
             });
 
+            // Payment entity configuration
             modelBuilder.Entity<Payment>(entity =>
             {
                 entity.HasKey(p => p.PaymentID);
@@ -63,6 +74,7 @@ namespace Cozy.Data
                       .HasForeignKey<Payment>(p => p.BookingID);
             });
 
+            // Review entity configuration
             modelBuilder.Entity<Review>(entity =>
             {
                 entity.HasKey(r => r.ReviewID);
@@ -74,6 +86,7 @@ namespace Cozy.Data
                       .HasForeignKey(r => r.HotelID);
             });
 
+            // Cancellation entity configuration
             modelBuilder.Entity<Cancellation>(entity =>
             {
                 entity.HasKey(c => c.CancellationID);
