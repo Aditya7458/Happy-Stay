@@ -1,9 +1,10 @@
 ﻿using Cozy.Models;
 using Cozy.Data;
 using Cozy.Repositories.Interfaces;
-using System;
 using Microsoft.EntityFrameworkCore;
-
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Cozy.Repositories.Implementations
 {
@@ -23,7 +24,16 @@ namespace Cozy.Repositories.Implementations
 
         public async Task<IEnumerable<Booking>> GetBookingsByUserIdAsync(int userId)
         {
-            return await _context.Bookings.Where(b => b.UserID == userId).ToListAsync();
+            return await _context.Bookings
+                .Where(b => b.UserID == userId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetBookingsByRoomIdAsync(int roomId) // New method
+        {
+            return await _context.Bookings
+                .Where(b => b.RoomID == roomId && b.Status == "Booked") // Only active bookings
+                .ToListAsync();
         }
 
         public async Task<Booking> AddBookingAsync(Booking booking)

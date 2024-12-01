@@ -1,4 +1,6 @@
 ﻿using Cozy.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Cozy.Repositories.Interfaces
 {
@@ -6,6 +8,7 @@ namespace Cozy.Repositories.Interfaces
     {
         Task<Booking> GetBookingByIdAsync(int id);
         Task<IEnumerable<Booking>> GetBookingsByUserIdAsync(int userId);
+        Task<IEnumerable<Booking>> GetBookingsByRoomIdAsync(int roomId); // New method
         Task<Booking> AddBookingAsync(Booking booking);
         Task<Booking> UpdateBookingAsync(Booking booking);
         Task<bool> DeleteBookingAsync(int id);

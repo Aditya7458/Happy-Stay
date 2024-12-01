@@ -8,11 +8,11 @@ namespace Cozy.Models
         [Key]
         public int HotelID { get; set; }
 
-        //[Required(ErrorMessage = "Hotel name is required.")]
+        [Required(ErrorMessage = "Hotel name is required.")]
         [StringLength(100, ErrorMessage = "Hotel name cannot exceed 100 characters.")]
         public string? Name { get; set; }
 
-        //[Required(ErrorMessage = "Location is required.")]
+        [Required(ErrorMessage = "Location is required.")]
         [StringLength(100, ErrorMessage = "Location cannot exceed 100 characters.")]
         public string? Location { get; set; }
 

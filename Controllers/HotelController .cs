@@ -86,6 +86,7 @@ namespace Cozy.Controllers
 
         #region User Operations
         // GET: api/hotel/Search
+        // GET: api/hotel/Search
         [HttpGet("Search")]
         [Authorize]  // Any authenticated user can search hotels
         public async Task<IActionResult> SearchHotels([FromQuery] SearchHotelDTO searchDTO)
@@ -94,38 +95,61 @@ namespace Cozy.Controllers
             {
                 var hotels = await _hotelRepository.GetAllHotelsAsync(); // Get all hotels
 
-                // If Location is provided, filter by Location
+                // Filter by location if provided (case-insensitive)
                 if (!string.IsNullOrEmpty(searchDTO.Location))
                 {
                     hotels = hotels.Where(h => h.Location.Contains(searchDTO.Location, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
-                // If Name is provided, filter by Name
+                // Filter by name if provided (case-insensitive)
                 if (!string.IsNullOrEmpty(searchDTO.Name))
                 {
                     hotels = hotels.Where(h => h.Name.Contains(searchDTO.Name, StringComparison.OrdinalIgnoreCase)).ToList();
                 }
 
-                // Filter by the number of rooms if provided
-                //if (searchDTO.NumberOfRooms > 0)
-                //{
-                //    hotels = hotels.Where(h => h.Rooms.Count >= searchDTO.NumberOfRooms).ToList();
-                //}
+                // Additional filters based on rooms and occupancy
+                hotels = hotels.Where(hotel =>
+                    hotel.Rooms.Any(room =>
+                        room.AvailabilityStatus &&
+                        room.MaxOccupancy >= (searchDTO.Adults + searchDTO.Children) &&
+                        room.HotelID == hotel.HotelID)  // Ensure rooms match the occupancy conditions
+                ).ToList();
 
-                //// If no filter criteria are provided, return all hotels
-                //if (hotels.Count == 0)
-                //{
-                //    return Ok(new { message = "No hotels found matching the search criteria." });
-                //}
+                // Limit the number of rooms based on the requested NumberOfRooms
+                var result = hotels.Select(hotel => new
+                {
+                    hotel.HotelID,
+                    hotel.Name,
+                    hotel.Location,
+                    hotel.Description,
+                    hotel.Amenities,
+                    hotel.ImageURL,
+                    Rooms = hotel.Rooms.Where(room =>
+                        room.AvailabilityStatus &&
+                        room.MaxOccupancy >= (searchDTO.Adults + searchDTO.Children) &&
+                        room.HotelID == hotel.HotelID)
+                        .Take(searchDTO.NumberOfRooms) // Limit the number of rooms returned
+                        .Select(room => new
+                        {
+                            room.RoomID,
+                            room.RoomSize,
+                            room.BedType,
+                            room.MaxOccupancy,
+                            room.BaseFare,
+                            room.IsAC
+                        })
+                        .ToList()
+                }).Where(h => h.Rooms.Any()); // Only include hotels with available rooms
 
-                // Return the filtered list of hotels
-                return Ok(hotels);
+                // Return the filtered list of hotels with their available rooms
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while searching for hotels.", error = ex.Message });
             }
         }
+
 
 
         // GET: api/hotel/{id}
