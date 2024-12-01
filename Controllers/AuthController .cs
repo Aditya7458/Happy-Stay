@@ -21,56 +21,72 @@ namespace Cozy.Controllers
             _userRepository = userRepository;
             _configuration = configuration;
         }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            // Check if username or email already exists
-            var users = await _userRepository.GetAllUsersAsync();
-            if (users.Any(u => u.Username == registerRequest.Username))
-                return BadRequest("Username already exists.");
-            if (users.Any(u => u.Email == registerRequest.Email))
-                return BadRequest("Email already exists.");
-
-            // Validate role
-            var validRoles = new[] { "Guest", "HotelOwner", "Admin" };
-            if (!validRoles.Contains(registerRequest.Role))
-                return BadRequest("Invalid role. Allowed roles are 'Guest', 'HotelOwner', 'Admin'.");
-
-            // Hash password (in production, use a secure hashing algorithm)
-            var newUser = new User
+            try
             {
-                Username = registerRequest.Username,
-                PasswordHash = registerRequest.Password, // Hash in real app
-                Email = registerRequest.Email,
-                Role = registerRequest.Role, // Assign role from request
-                CreatedAt = DateTime.UtcNow
-            };
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var createdUser = await _userRepository.AddUserAsync(newUser);
-            return Ok(new { Message = "User registered successfully", UserId = createdUser.UserID });
+                // Check if username or email already exists
+                var users = await _userRepository.GetAllUsersAsync();
+                if (users.Any(u => u.Username == registerRequest.Username))
+                    return BadRequest("Username already exists.");
+                if (users.Any(u => u.Email == registerRequest.Email))
+                    return BadRequest("Email already exists.");
+
+                // Validate role
+                var validRoles = new[] { "Guest", "HotelOwner", "Admin" };
+                if (!validRoles.Contains(registerRequest.Role))
+                    return BadRequest("Invalid role. Allowed roles are 'Guest', 'HotelOwner', 'Admin'.");
+
+                // Hash password (in production, use a secure hashing algorithm)
+                var newUser = new User
+                {
+                    Username = registerRequest.Username,
+                    PasswordHash = registerRequest.Password, // Hash in real app
+                    Email = registerRequest.Email,
+                    Role = registerRequest.Role, // Assign role from request
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var createdUser = await _userRepository.AddUserAsync(newUser);
+                return Ok(new { Message = "User registered successfully", UserId = createdUser.UserID });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details (consider using a logging framework)
+                return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
+            }
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var users = await _userRepository.GetAllUsersAsync();
-            var matchedUser = users.FirstOrDefault(u =>
-                u.Email == loginRequest.Email && // Search by email instead of username
-                u.PasswordHash == loginRequest.Password); // Use hashed password comparison in production
+                var users = await _userRepository.GetAllUsersAsync();
+                var matchedUser = users.FirstOrDefault(u =>
+                    u.Email == loginRequest.Email && // Search by email
+                    u.PasswordHash == loginRequest.Password); // Use hashed password comparison in production
 
-            if (matchedUser == null)
-                return Unauthorized("Invalid email or password.");
+                if (matchedUser == null)
+                    return Unauthorized("Invalid email or password.");
 
-            var token = GenerateJwtToken(matchedUser);
-            return Ok(new { Token = token });
+                var token = GenerateJwtToken(matchedUser);
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details (consider using a logging framework)
+                return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
+            }
         }
-
 
         private string GenerateJwtToken(User user)
         {
@@ -79,10 +95,10 @@ namespace Cozy.Controllers
 
             var claims = new[]
             {
-        new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-        new Claim(ClaimTypes.Name, user.Username),
-        new Claim(ClaimTypes.Role, user.Role)  // Ensure Role is added here
-    };
+                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, user.Role)  // Ensure Role is added here
+            };
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
@@ -94,9 +110,9 @@ namespace Cozy.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
     }
 
+    // DTO classes for Login and Registration
     public class LoginRequest
     {
         [Required(ErrorMessage = "Email is required.")]

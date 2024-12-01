@@ -25,25 +25,33 @@ namespace Cozy.Controllers
         [Authorize(Roles = "Admin")]  // Only Admin can add hotels
         public async Task<IActionResult> AddHotel([FromBody] AddHotelDTO hotelDTO)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            // Map the DTO to the Hotel model
-            var hotel = new Hotel
+            try
             {
-                Name = hotelDTO.Name,
-                Location = hotelDTO.Location,
-                Description = hotelDTO.Description,
-                Amenities = hotelDTO.Amenities,
-                ImageURL = hotelDTO.ImageURL,
-                IsActive = hotelDTO.IsActive,
-                CreatedBy = hotelDTO.CreatedBy,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var createdHotel = await _hotelRepository.AddHotelAsync(hotel);
-            return Ok(new { Message = "Hotel added successfully", Hotel = createdHotel });
+                // Map the DTO to the Hotel model
+                var hotel = new Hotel
+                {
+                    Name = hotelDTO.Name,
+                    Location = hotelDTO.Location,
+                    Description = hotelDTO.Description,
+                    Amenities = hotelDTO.Amenities,
+                    ImageURL = hotelDTO.ImageURL,
+                    IsActive = hotelDTO.IsActive,
+                    CreatedBy = hotelDTO.CreatedBy,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                var createdHotel = await _hotelRepository.AddHotelAsync(hotel);
+                return Ok(new { Message = "Hotel added successfully", Hotel = createdHotel });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details (you can use a logging framework like Serilog or NLog)
+                return StatusCode(500, new { Message = "An error occurred while adding the hotel.", Details = ex.Message });
+            }
         }
 
         // PUT: api/hotel/update
@@ -51,24 +59,32 @@ namespace Cozy.Controllers
         [Authorize(Roles = "Admin")]  // Only Admin can update hotels
         public async Task<IActionResult> UpdateHotel([FromBody] UpdateHotelDTO hotelDTO)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            var hotel = await _hotelRepository.GetHotelByIdAsync(hotelDTO.HotelID);
-            if (hotel == null)
-                return NotFound("Hotel not found.");
+                var hotel = await _hotelRepository.GetHotelByIdAsync(hotelDTO.HotelID);
+                if (hotel == null)
+                    return NotFound("Hotel not found.");
 
-            // Update hotel properties
-            hotel.Name = hotelDTO.Name;
-            hotel.Location = hotelDTO.Location;
-            hotel.Description = hotelDTO.Description;
-            hotel.Amenities = hotelDTO.Amenities;
-            hotel.ImageURL = hotelDTO.ImageURL;
-            hotel.IsActive = hotelDTO.IsActive;
-            hotel.UpdatedAt = DateTime.UtcNow;
+                // Update hotel properties
+                hotel.Name = hotelDTO.Name;
+                hotel.Location = hotelDTO.Location;
+                hotel.Description = hotelDTO.Description;
+                hotel.Amenities = hotelDTO.Amenities;
+                hotel.ImageURL = hotelDTO.ImageURL;
+                hotel.IsActive = hotelDTO.IsActive;
+                hotel.UpdatedAt = DateTime.UtcNow;
 
-            var updatedHotel = await _hotelRepository.UpdateHotelAsync(hotel);
-            return Ok(new { Message = "Hotel updated successfully", Hotel = updatedHotel });
+                var updatedHotel = await _hotelRepository.UpdateHotelAsync(hotel);
+                return Ok(new { Message = "Hotel updated successfully", Hotel = updatedHotel });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details
+                return StatusCode(500, new { Message = "An error occurred while updating the hotel.", Details = ex.Message });
+            }
         }
 
         // DELETE: api/hotel/delete/{id}
@@ -76,16 +92,23 @@ namespace Cozy.Controllers
         [Authorize(Roles = "Admin")]  // Only Admin can delete hotels
         public async Task<IActionResult> DeleteHotel(int id)
         {
-            var success = await _hotelRepository.DeleteHotelAsync(id);
-            if (!success)
-                return NotFound("Hotel not found.");
+            try
+            {
+                var success = await _hotelRepository.DeleteHotelAsync(id);
+                if (!success)
+                    return NotFound("Hotel not found.");
 
-            return Ok(new { Message = "Hotel deleted successfully" });
+                return Ok(new { Message = "Hotel deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details
+                return StatusCode(500, new { Message = "An error occurred while deleting the hotel.", Details = ex.Message });
+            }
         }
         #endregion
 
         #region User Operations
-        // GET: api/hotel/Search
         // GET: api/hotel/Search
         [HttpGet("Search")]
         [Authorize]  // Any authenticated user can search hotels
@@ -146,11 +169,10 @@ namespace Cozy.Controllers
             }
             catch (Exception ex)
             {
+                // Log the exception details
                 return StatusCode(500, new { message = "An error occurred while searching for hotels.", error = ex.Message });
             }
         }
-
-
 
         // GET: api/hotel/{id}
         [HttpGet("{id}")]
@@ -196,6 +218,7 @@ namespace Cozy.Controllers
             }
             catch (Exception ex)
             {
+                // Log the exception details
                 return StatusCode(500, new { message = "An error occurred while fetching hotel details.", error = ex.Message });
             }
         }
