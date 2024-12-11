@@ -6,6 +6,9 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace Cozy.Controllers
 {
@@ -32,21 +35,23 @@ namespace Cozy.Controllers
 
                 // Check if username or email already exists
                 var users = await _userRepository.GetAllUsersAsync();
-                if (users.Any(u => u.Username == registerRequest.Username))
-                    return BadRequest("Username already exists.");
                 if (users.Any(u => u.Email == registerRequest.Email))
-                    return BadRequest("Email already exists.");
+                    return BadRequest( new { Message = "Email already exists." });
+                //return StatusCode(400, new { Message = "Email already exists."});
 
                 // Validate role
                 var validRoles = new[] { "Guest", "HotelOwner", "Admin" };
                 if (!validRoles.Contains(registerRequest.Role))
-                    return BadRequest("Invalid role. Allowed roles are 'Guest', 'HotelOwner', 'Admin'.");
+                    return BadRequest(new { Message = "Invalid role. Allowed roles are 'Guest', 'HotelOwner', 'Admin'." });
+                //return StatusCode(400, new { Message = "Invalid role. Allowed roles are 'Guest', 'HotelOwner', 'Admin'." });
 
-                // Hash password (in production, use a secure hashing algorithm)
+                // Hash password
+                var hashedPassword = HashPassword(registerRequest.Password);
+
                 var newUser = new User
                 {
                     Username = registerRequest.Username,
-                    PasswordHash = registerRequest.Password, // Hash in real app
+                    PasswordHash = hashedPassword, // Save hashed password
                     Email = registerRequest.Email,
                     Role = registerRequest.Role, // Assign role from request
                     CreatedAt = DateTime.UtcNow
@@ -62,6 +67,16 @@ namespace Cozy.Controllers
             }
         }
 
+        // Helper method to hash passwords
+        private string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(password);
+                var hash = sha256.ComputeHash(bytes);
+                return Convert.ToBase64String(hash);
+            }
+        }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
@@ -71,20 +86,68 @@ namespace Cozy.Controllers
                     return BadRequest(ModelState);
 
                 var users = await _userRepository.GetAllUsersAsync();
+
+                var inputPasswordHash = HashPassword(loginRequest.Password);
+
                 var matchedUser = users.FirstOrDefault(u =>
-                    u.Email == loginRequest.Email && // Search by email
-                    u.PasswordHash == loginRequest.Password); // Use hashed password comparison in production
+                    u.Email == loginRequest.Email &&
+                    u.PasswordHash == inputPasswordHash);
 
                 if (matchedUser == null)
                     return Unauthorized("Invalid email or password.");
 
                 var token = GenerateJwtToken(matchedUser);
-                return Ok(new { Token = token });
+
+                HttpContext.Response.Cookies.Append(
+                    "AuthToken",
+                    token,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.None,
+                        Expires = DateTime.UtcNow.AddHours(1)
+                    }
+                );
+
+                // Include role in response
+                return Ok(new
+                {
+                    Message = "Login successful!",
+                    token,
+                    role = matchedUser.Role,
+                    matchedUser
+                });
             }
             catch (Exception ex)
             {
-                // Log the exception details (consider using a logging framework)
                 return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
+            }
+        }
+
+        // Ensure the user is authenticated with a valid token
+        [HttpGet("validate-token")]
+        [Authorize]
+        public IActionResult ValidateToken()
+        {
+            try
+            {
+                var user = User.Identity;
+
+                if (user == null || !user.IsAuthenticated)
+                {
+                    return Unauthorized("Invalid token.");
+                }
+
+                // Debug log the user identity
+                Console.WriteLine($"Authenticated user: {user.Name}");
+
+                return Ok(new { Message = "Token is valid",user });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Token validation error: {ex.Message}");
+                return StatusCode(500, new { Message = "Token validation failed.", Details = ex.Message });
             }
         }
 

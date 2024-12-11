@@ -58,6 +58,18 @@ namespace Cozy
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
 
+            // Configure CORS policy
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngularApp", policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200") // Replace with Angular app's origin
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
             // Add Swagger/OpenAPI configuration for API documentation
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(opt =>
@@ -92,7 +104,6 @@ namespace Cozy
             builder.Logging.AddConsole();
             builder.Logging.AddDebug();
 
-
             var app = builder.Build();
 
             // Middleware pipeline configuration
@@ -104,6 +115,9 @@ namespace Cozy
             }
 
             app.UseHttpsRedirection();
+
+            // Enable CORS middleware
+            app.UseCors("AllowAngularApp");
 
             // Enable authentication and authorization middleware
             app.UseAuthentication();
