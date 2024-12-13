@@ -9,11 +9,11 @@ namespace Cozy.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class UserController : ControllerBase
+    public class ExtraController : ControllerBase
     {
         private readonly IUserRepository _userRepository;
 
-        public UserController(IUserRepository userRepository)
+        public ExtraController(IUserRepository userRepository)
         {
             _userRepository = userRepository;
         }
@@ -29,5 +29,18 @@ namespace Cozy.Controllers
 
             return Ok(nonAdminUsers);
         }
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            var isDeleted = await _userRepository.DeleteUserAsync(id);
+
+            if (!isDeleted)
+            {
+                return NotFound(new { message = "User not found or already deleted." });
+            }
+
+            return Ok(new { message = "User deleted successfully." });
+        }
+
     }
 }
