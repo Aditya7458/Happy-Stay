@@ -168,5 +168,21 @@ namespace Cozy.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred while processing the refund.", Details = ex.Message });
             }
         }
+
+        [HttpGet("AllBookingsWithDetails")]
+        
+        public async Task<ActionResult<IEnumerable<BookingResponseDTO>>> GetAllBookingsWithDetails()
+        {
+            try
+            {
+                var bookings = await _bookingRepository.GetAllBookingsWithDetailsAsync();
+                return Ok(bookings);
+            }
+            catch (Exception ex)
+            {
+                // Log exception (use a logging framework in production)
+                return StatusCode(500, new { Message = "An error occurred while fetching bookings.", Details = ex.Message });
+            }
+        }
     }
 }

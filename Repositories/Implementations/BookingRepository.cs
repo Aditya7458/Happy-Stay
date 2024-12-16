@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Cozy.DTOs;
 
 namespace Cozy.Repositories.Implementations
 {
@@ -58,6 +59,28 @@ namespace Cozy.Repositories.Implementations
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
             return true;
+        }
+        public async Task<IEnumerable<BookingResponseDTO>> GetAllBookingsWithDetailsAsync()
+        {
+            return await _context.Bookings
+                .Include(b => b.User) // Include user details
+                .Include(b => b.Room) // Include room to access hotel
+                    .ThenInclude(r => r.Hotel)
+                .Select(b => new BookingResponseDTO
+                {
+                    BookingID = b.BookingID,
+                    UserName = b.User.Username,
+                    UserEmail = b.User.Email,
+                    HotelName = b.Room.Hotel.Name,
+                    HotelLocation = b.Room.Hotel.Location,
+                    CheckInDate = b.CheckInDate,
+                    CheckOutDate = b.CheckOutDate,
+                    TotalPrice = b.TotalPrice,
+                    NumberOfAdults = b.NumberOfAdults,
+                    NumberOfChildren = b.NumberOfChildren,
+                    Status = b.Status
+                })
+                .ToListAsync();
         }
     }
 }

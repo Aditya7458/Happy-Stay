@@ -1,33 +1,53 @@
 ﻿using Cozy.Models;
+using Cozy.Data;
+using System;
+using Microsoft.EntityFrameworkCore;
 using Cozy.Repositories.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Cozy.Controllers
+
+namespace Cozy.Repositories.Implementations
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class UserController : ControllerBase
+    public class UserRepository : IUserRepository
     {
-        private readonly IUserRepository _userRepository;
+        private readonly AppDbContext _context;
 
-        public UserController(IUserRepository userRepository)
+        public UserRepository(AppDbContext context)
         {
-            _userRepository = userRepository;
+            _context = context;
         }
 
-        // GET: api/User/NonAdminUsers
-        [HttpGet("NonAdminUsers")]
-        public async Task<IActionResult> GetNonAdminUsers()
+        public async Task<User> GetUserByIdAsync(int id)
         {
-            var users = await _userRepository.GetAllUsersAsync();
+            return await _context.Users.FindAsync(id);
+        }
 
-            // Filter out users with the "Admin" role
-            var nonAdminUsers = users.Where(user => user.Role != "Admin").ToList();
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            return await _context.Users.ToListAsync();
+        }
 
-            return Ok(nonAdminUsers);
+        public async Task<User> AddUserAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        public async Task<User> UpdateUserAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        public async Task<bool> DeleteUserAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

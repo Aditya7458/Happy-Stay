@@ -1,4 +1,5 @@
-﻿using Cozy.Models;
+﻿using Cozy.DTOs;
+using Cozy.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,5 +13,7 @@ namespace Cozy.Repositories.Interfaces
         Task<Booking> AddBookingAsync(Booking booking);
         Task<Booking> UpdateBookingAsync(Booking booking);
         Task<bool> DeleteBookingAsync(int id);
+
+        Task<IEnumerable<BookingResponseDTO>> GetAllBookingsWithDetailsAsync();
     }
 }
